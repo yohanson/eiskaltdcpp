@@ -159,13 +159,15 @@ void Magnet::download() {
 
 void Magnet::slotBrowse(){
     QMenu *down_to = NULL;
-    QString aliases, paths;
+    QString aliases, paths, recents;
 
     aliases = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_ALIASES).toUtf8());
     paths   = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_PATHS).toUtf8());
+    recents = QByteArray::fromBase64(WSGET(WS_DOWNLOADTO_RECENTS).toUtf8());
 
     QStringList a = aliases.split("\n", QString::SkipEmptyParts);
     QStringList p = paths.split("\n", QString::SkipEmptyParts);
+    QStringList r = recents.split("\n", QString::SkipEmptyParts);
 
     if (a.size() == p.size() && !a.isEmpty()){
         down_to = new QMenu();
@@ -177,6 +179,12 @@ void Magnet::slotBrowse(){
             down_to->addAction(act);
         }
 
+        down_to->addSeparator();
+        for (int i = 0; i < r.size(); i++){
+            QAction *act = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), r.at(i), down_to);
+            act->setData(r.at(i));
+            down_to->addAction(act);
+        }
         down_to->addSeparator();
 
         QAction *browse = new QAction(WICON(WulforUtil::eiFOLDER_BLUE), tr("Browse"), down_to);
@@ -205,6 +213,16 @@ void Magnet::slotBrowse(){
         return;
 
     dir = QDir::toNativeSeparators(dir);
+    if (r.contains(dir)){
+        r.removeAt(r.indexOf(dir)); // to move up
+    }
+    r.push_front(dir);
+    while (r.size() > 10) {
+        r.pop_back();
+    }
+
+    recents = r.join("\n");
+    WSSET(WS_DOWNLOADTO_RECENTS, recents.toUtf8().toBase64());
 
     lineEdit_FPATH->setText(dir + PATH_SEPARATOR_STR);
 }
